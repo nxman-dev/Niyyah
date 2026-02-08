@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { supabase } from '../../lib/supabase';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function SignupScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const navigation = useNavigation<any>();
+    const { colors, isDark } = useTheme();
 
     async function signUpWithEmail() {
         setLoading(true);
@@ -37,29 +39,38 @@ export default function SignupScreen() {
         }
     }
 
+    // Dynamic Styles for items
+    const dynamicStyles = {
+        container: { backgroundColor: colors.background },
+        inputContainer: { backgroundColor: colors.surface, shadowOpacity: isDark ? 0 : 0.05 },
+        input: { color: colors.text },
+        linkText: { color: colors.textLight },
+        iconContainer: { backgroundColor: 'rgba(255,255,255,0.2)' }
+    };
+
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.container}
+            style={[styles.container, dynamicStyles.container]}
         >
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#FFF" />
                 </TouchableOpacity>
                 <View style={styles.iconContainer}>
-                    <Ionicons name="person-add" size={40} color={Colors.surface} />
+                    <Ionicons name="person-add" size={40} color="#FFF" />
                 </View>
                 <Text style={styles.title}>Create Account</Text>
                 <Text style={styles.subtitle}>Start your prayer journey today</Text>
             </View>
 
             <View style={styles.form}>
-                <View style={styles.inputContainer}>
-                    <Ionicons name="mail-outline" size={20} color={Colors.textLight} style={styles.inputIcon} />
+                <View style={[styles.inputContainer, dynamicStyles.inputContainer]}>
+                    <Ionicons name="mail-outline" size={20} color={colors.textLight} style={styles.inputIcon} />
                     <TextInput
-                        style={styles.input}
+                        style={[styles.input, dynamicStyles.input]}
                         placeholder="Email"
-                        placeholderTextColor={Colors.textLight}
+                        placeholderTextColor={colors.textLight}
                         value={email}
                         onChangeText={setEmail}
                         autoCapitalize="none"
@@ -67,12 +78,12 @@ export default function SignupScreen() {
                     />
                 </View>
 
-                <View style={styles.inputContainer}>
-                    <Ionicons name="lock-closed-outline" size={20} color={Colors.textLight} style={styles.inputIcon} />
+                <View style={[styles.inputContainer, dynamicStyles.inputContainer]}>
+                    <Ionicons name="lock-closed-outline" size={20} color={colors.textLight} style={styles.inputIcon} />
                     <TextInput
-                        style={styles.input}
+                        style={[styles.input, dynamicStyles.input]}
                         placeholder="Password"
-                        placeholderTextColor={Colors.textLight}
+                        placeholderTextColor={colors.textLight}
                         value={password}
                         onChangeText={setPassword}
                         secureTextEntry
@@ -92,7 +103,7 @@ export default function SignupScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.linkButton}>
-                    <Text style={styles.linkText}>
+                    <Text style={[styles.linkText, dynamicStyles.linkText]}>
                         Already have an account? <Text style={styles.linkTextBold}>Sign In</Text>
                     </Text>
                 </TouchableOpacity>

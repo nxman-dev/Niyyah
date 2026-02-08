@@ -4,7 +4,7 @@ import { Colors } from '../../constants/Colors';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import UniversalTimePicker from '../../components/UniversalTimePicker';
 import { PRAYER_TIMES } from '../../constants/PrayerTimes';
 
 // Default times in case context isn't loaded or relevant yet (since we are setting up FRESH profile)
@@ -52,11 +52,12 @@ export default function UsernameScreen() {
     };
 
     const onTimeChange = (event: any, selectedDate?: Date) => {
-        if (Platform.OS === 'android') setShowPicker(false);
-
-        if (selectedDate && editingId) {
-            if (Platform.OS === 'ios' || Platform.OS === 'web') setPickerValue(selectedDate);
-            else applyTimeUpdate(selectedDate);
+        if (selectedDate) {
+            setPickerValue(selectedDate);
+            if (Platform.OS === 'android') {
+                applyTimeUpdate(selectedDate);
+                setShowPicker(false);
+            }
         }
     };
 
@@ -87,11 +88,7 @@ export default function UsernameScreen() {
         if (Platform.OS !== 'ios' && Platform.OS !== 'web') setEditingId(null);
     };
 
-    const confirmIosTime = () => {
-        applyTimeUpdate(pickerValue);
-        setShowPicker(false);
-        setEditingId(null);
-    };
+
 
     async function handleFinish() {
         if (!user) return;
@@ -198,60 +195,17 @@ export default function UsernameScreen() {
                     )}
                 </View>
 
-                {/* Picker Modal (iOS & Web) or Component (Android) */}
-                {Platform.OS === 'android' && showPicker && (
-                    <DateTimePicker value={pickerValue} mode="time" display="default" onChange={onTimeChange} />
-                )}
-                {(Platform.OS === 'ios' || Platform.OS === 'web') && (
-                    <Modal visible={showPicker} transparent animationType="slide">
-                        <View style={styles.modalContainer}>
-                            <View style={styles.pickerCard}>
-                                <View style={styles.pickerHeader}>
-                                    <TouchableOpacity onPress={() => setShowPicker(false)}>
-                                        <Text style={styles.cancelText}>Cancel</Text>
-                                    </TouchableOpacity>
-                                    <Text style={styles.pickerTitle}>Set Time</Text>
-                                    <TouchableOpacity onPress={() => {
-                                        if (Platform.OS === 'web') {
-                                            const [h, m] = webTimeInput.split(':').map(Number);
-                                            if (!isNaN(h) && !isNaN(m) && h >= 0 && h < 24 && m >= 0 && m < 60) {
-                                                const d = new Date();
-                                                d.setHours(h, m);
-                                                applyTimeUpdate(d);
-                                                setShowPicker(false);
-                                            } else {
-                                                Alert.alert("Invalid Time", "Please enter time in HH:MM format (24h).");
-                                            }
-                                        } else {
-                                            confirmIosTime();
-                                        }
-                                    }}>
-                                        <Text style={styles.doneText}>Done</Text>
-                                    </TouchableOpacity>
-                                </View>
-                                {Platform.OS === 'web' ? (
-                                    <View style={{ alignItems: 'center', padding: 20 }}>
-                                        <View style={{
-                                            flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.background,
-                                            borderRadius: 8, paddingHorizontal: 16, borderWidth: 1, borderColor: Colors.border
-                                        }}>
-                                            <TextInput
-                                                value={webTimeInput}
-                                                onChangeText={setWebTimeInput}
-                                                placeholder="HH:MM"
-                                                maxLength={5}
-                                                style={{ fontSize: 24, fontWeight: 'bold', padding: 12, minWidth: 100, textAlign: 'center' }}
-                                            />
-                                        </View>
-                                        <Text style={{ marginTop: 8, color: Colors.textLight, fontSize: 12 }}>Format: HH:MM (24h)</Text>
-                                    </View>
-                                ) : (
-                                    <DateTimePicker value={pickerValue} mode="time" display="spinner" onChange={onTimeChange} themeVariant="light" />
-                                )}
-                            </View>
-                        </View>
-                    </Modal>
-                )}
+                {/* Universal Time Picker */}
+                <UniversalTimePicker
+                    show={showPicker}
+                    value={pickerValue}
+                    onClose={() => setShowPicker(false)}
+                    onChange={onTimeChange}
+                    onConfirm={() => {
+                        applyTimeUpdate(pickerValue);
+                        setShowPicker(false);
+                    }}
+                />
 
             </KeyboardAvoidingView>
         </SafeAreaView>

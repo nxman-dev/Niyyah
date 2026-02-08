@@ -1,45 +1,54 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
+import { Home, BarChart2, Trophy, Settings } from 'lucide-react-native';
 import HomeScreen from '../screens/HomeScreen';
 import ProgressScreen from '../screens/ProgressScreen';
 
 import AchievementsScreen from '../screens/AchievementsScreen';
 import SettingsNavigator from './SettingsNavigator';
-import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 
 const Tab = createBottomTabNavigator();
 
 export default function BottomTabNavigator() {
+    const { colors, isDark } = useTheme();
+
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
                 tabBarIcon: ({ focused, color, size }) => {
-                    let iconName: keyof typeof Ionicons.glyphMap = 'home';
+                    const iconSize = 24; // Lucide icons look better slightly smaller or consistent
 
                     if (route.name === 'Home') {
-                        iconName = focused ? 'home' : 'home-outline';
+                        return <Home size={iconSize} color={color} strokeWidth={focused ? 2.5 : 1.5} />;
                     } else if (route.name === 'Progress') {
-                        iconName = focused ? 'bar-chart' : 'bar-chart-outline';
-                    } else if (route.name === 'Progress') {
-                        iconName = focused ? 'bar-chart' : 'bar-chart-outline';
+                        return <BarChart2 size={iconSize} color={color} strokeWidth={focused ? 2.5 : 1.5} />;
                     } else if (route.name === 'Achievements') {
-                        iconName = focused ? 'trophy' : 'trophy-outline';
+                        return <Trophy size={iconSize} color={color} strokeWidth={focused ? 2.5 : 1.5} />;
                     } else if (route.name === 'Settings') {
-                        iconName = focused ? 'settings' : 'settings-outline';
+                        return <Settings size={iconSize} color={color} strokeWidth={focused ? 2.5 : 1.5} />;
                     }
-
-                    return <Ionicons name={iconName} size={size} color={color} />;
+                    return null;
                 },
-                tabBarActiveTintColor: Colors.primary,
-                tabBarInactiveTintColor: Colors.textLight,
+                tabBarActiveTintColor: colors.primary,
+                tabBarInactiveTintColor: colors.textLight,
                 tabBarStyle: {
-                    backgroundColor: Colors.surface,
-                    borderTopColor: Colors.border,
-                    height: 60,
-                    paddingBottom: 8,
+                    backgroundColor: colors.surface,
+                    borderTopColor: colors.border,
+                    height: Platform.OS === 'android' ? 60 : 85, // Adjust for platform
+                    paddingBottom: Platform.OS === 'android' ? 8 : 30,
                     paddingTop: 8,
                 },
+                tabBarLabel: ({ focused, color }) => (
+                    <Text style={{
+                        color,
+                        fontSize: 10,
+                        fontFamily: focused ? 'Inter_600SemiBold' : 'Inter_400Regular',
+                        marginBottom: 4
+                    }}>
+                        {route.name}
+                    </Text>
+                ),
                 headerShown: false,
             })}
         >
@@ -51,3 +60,5 @@ export default function BottomTabNavigator() {
         </Tab.Navigator>
     );
 }
+
+import { Platform, Text } from 'react-native';

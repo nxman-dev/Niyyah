@@ -459,23 +459,30 @@ export function PrayerProvider({ children }: { children: React.ReactNode }) {
             // --- OPTIMISTIC UPDATE END ---
 
             // --- SYNC START ---
-            const prayerName = INITIAL_PRAYERS.find(p => p.id === prayerId)?.name || 'Prayer';
-            console.log(`[markAsPrayed] Syncing ${prayerName} to ${targetStatus} using Composite Key`);
+            // --- SYNC START ---
+            const prayerObj = INITIAL_PRAYERS.find(p => p.id === prayerId);
+            if (!prayerObj) {
+                throw new Error(`Invalid prayer ID: ${prayerId}`);
+            }
+            const prayerName = prayerObj.name;
+
+            const payload = {
+                user_id: user.id,
+                prayer_name: prayerName,
+                status: targetStatus,
+                date: today
+            };
+            console.log(`[markAsPrayed] Syncing Payload:`, payload);
 
             // UPSERT using user_id + date + prayer_name
             const { error: upsertError } = await supabase
                 .from('prayers')
-                .upsert({
-                    user_id: user.id,
-                    prayer_name: prayerName,
-                    status: targetStatus,
-                    date: today
-                }, {
+                .upsert(payload, {
                     onConflict: 'user_id, date, prayer_name'
                 });
 
             if (upsertError) {
-                console.error("[markAsPrayed] Upsert Failed:", upsertError);
+                console.error("[markAsPrayed] Upsert Failed. Details:", JSON.stringify(upsertError, null, 2));
                 throw upsertError;
             }
 
@@ -570,12 +577,22 @@ export function PrayerProvider({ children }: { children: React.ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
             try {
-                await supabase.from('profiles').update({
+                const payload = {
                     prayer_settings: updated,
                     updated_at: new Date()
-                }).eq('id', session.user.id);
-            } catch (err) {
-                console.log("Supabase settings sync error", err);
+                };
+                console.log('Sending to Supabase:', payload);
+
+                const { error } = await supabase.from('profiles').update(payload).eq('id', session.user.id);
+
+                if (error) {
+                    console.error("Supabase settings sync error:", error);
+                    Alert.alert("Sync Error", `Failed to save settings: ${error.message}`);
+                    throw error;
+                }
+            } catch (err: any) {
+                console.log("Supabase settings sync EXCEPTION", err);
+                Alert.alert("Sync Error", err.message || "Unknown error occurred");
             }
         }
     };

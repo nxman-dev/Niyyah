@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ViewStyle, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Animated } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
-import Animated, { useSharedValue, useAnimatedStyle, withDelay, withSpring } from 'react-native-reanimated';
-import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 
 interface PrayerCardProps {
     id: string;
@@ -13,17 +12,21 @@ interface PrayerCardProps {
     disabled?: boolean;
     displayTime?: string;
     displayLabel?: string;
+    isNext?: boolean;
 }
 
-const PrayerIcon = ({ name }: { name: string }) => {
+const PrayerIcon = ({ name, isDark }: { name: string, isDark: boolean }) => {
     let iconName: keyof typeof Feather.glyphMap = 'sun';
     let color = '#F6E05E';
 
     if (name === 'Fajr') { iconName = 'sunrise'; color = '#F6AD55'; }
     else if (name === 'Dhuhr') { iconName = 'sun'; color = '#F6E05E'; }
-    else if (name === 'Asr') { iconName = 'cloud'; color = '#CBD5E0'; } // Afternoon cloud?
+    else if (name === 'Asr') { iconName = 'cloud'; color = '#CBD5E0'; }
     else if (name === 'Maghrib') { iconName = 'sunset'; color = '#F6AD55'; }
     else if (name === 'Isha') { iconName = 'moon'; color = '#4A5568'; }
+
+    // Adjust icon colors for dark mode visibility if needed
+    if (isDark && name === 'Isha') { color = '#A0AEC0'; }
 
     return (
         <View style={[styles.iconContainer, { backgroundColor: color + '20' }]}>
@@ -32,24 +35,10 @@ const PrayerIcon = ({ name }: { name: string }) => {
     );
 };
 
-
-
 export default function AnimatedPrayerCard({ id, name, status, index, onPress, disabled, displayTime, displayLabel }: PrayerCardProps) {
-    const translateX = useSharedValue(-50);
-    const opacity = useSharedValue(0);
+    const scaleValue = useRef(new Animated.Value(1)).current;
     const [isLoading, setIsLoading] = useState(false);
-
-    useEffect(() => {
-        translateX.value = withDelay(index * 100, withSpring(0));
-        opacity.value = withDelay(index * 100, withSpring(1));
-    }, []);
-
-    const animatedStyle = useAnimatedStyle(() => {
-        return {
-            transform: [{ translateX: translateX.value }],
-            opacity: opacity.value,
-        };
-    });
+    const { colors, isDark } = useTheme();
 
     const isPrayed = status === 'Prayed' || status === 'Late';
     const isLate = status === 'Late';
@@ -57,6 +46,23 @@ export default function AnimatedPrayerCard({ id, name, status, index, onPress, d
     const handlePress = async () => {
         if (isLoading) return;
         setIsLoading(true);
+
+        // Pop Animation
+        Animated.sequence([
+            Animated.timing(scaleValue, {
+                toValue: 0.95,
+                duration: 150, // Slower, smoother shrink
+                useNativeDriver: true,
+                // easing: Easing.out(Easing.quad), // We need to import Easing if we use it, but default is often fine. Let's stick to simple timing first or add import.
+            }),
+            Animated.spring(scaleValue, {
+                toValue: 1,
+                friction: 4, // Lower friction for a bit more "life" but controlled
+                tension: 20, // Lower tension = slower, smoother bounce back
+                useNativeDriver: true,
+            })
+        ]).start();
+
         try {
             await onPress();
         } finally {
@@ -64,8 +70,28 @@ export default function AnimatedPrayerCard({ id, name, status, index, onPress, d
         }
     };
 
+    // Dynamic Styles for items
+    const dynamicStyles = {
+        card: {
+            backgroundColor: colors.surface,
+            shadowOpacity: isDark ? 0 : 0.1,
+            shadowColor: colors.primary
+        },
+        name: { color: colors.text },
+        nameCompleted: { color: colors.primary },
+        timeLabel: { color: colors.textLight },
+        timeValue: { color: colors.text },
+        checkboxUnchecked: { borderColor: colors.border },
+        checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+    };
+
     return (
-        <Animated.View style={[styles.card, animatedStyle, disabled && { opacity: 0.6 }]}>
+        <Animated.View style={[
+            styles.card,
+            dynamicStyles.card,
+            disabled && { opacity: 0.6 },
+            { transform: [{ scale: scaleValue }] }
+        ]}>
             <TouchableOpacity
                 style={styles.touchable}
                 onPress={handlePress}
@@ -73,12 +99,12 @@ export default function AnimatedPrayerCard({ id, name, status, index, onPress, d
                 disabled={disabled || isLoading}
             >
                 <View style={styles.leftContent}>
-                    <PrayerIcon name={name} />
+                    <PrayerIcon name={name} isDark={isDark} />
                     <View>
-                        <Text style={[styles.name, isPrayed && styles.nameCompleted]}>{name}</Text>
+                        <Text style={[styles.name, dynamicStyles.name, isPrayed && dynamicStyles.nameCompleted]}>{name}</Text>
                         <View style={styles.timeContainer}>
-                            <Text style={styles.timeLabel}>{displayLabel || ''}</Text>
-                            <Text style={styles.timeValue}>{displayTime || ''}</Text>
+                            <Text style={[styles.timeLabel, dynamicStyles.timeLabel]}>{displayLabel || ''}</Text>
+                            <Text style={[styles.timeValue, dynamicStyles.timeValue]}>{displayTime || ''}</Text>
                         </View>
                         {isLate && (
                             <View style={styles.lateBadge}>
@@ -90,11 +116,11 @@ export default function AnimatedPrayerCard({ id, name, status, index, onPress, d
 
                 <View style={[
                     styles.checkboxRing,
-                    isPrayed ? styles.checkboxChecked : styles.checkboxUnchecked,
+                    isPrayed ? [styles.checkboxChecked, dynamicStyles.checkboxChecked] : [styles.checkboxUnchecked, dynamicStyles.checkboxUnchecked],
                     isLate && styles.checkboxLate
                 ]}>
                     {isLoading ? (
-                        <ActivityIndicator size="small" color={isPrayed ? '#FFF' : Colors.primary} />
+                        <ActivityIndicator size="small" color={isPrayed ? '#FFF' : colors.primary} />
                     ) : (
                         isPrayed && <Ionicons name="checkmark" size={16} color="#FFF" />
                     )}
@@ -106,12 +132,9 @@ export default function AnimatedPrayerCard({ id, name, status, index, onPress, d
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: Colors.surface,
         marginBottom: 12,
         borderRadius: 16,
-        shadowColor: Colors.primary,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
         shadowRadius: 12,
         elevation: 3,
     },
@@ -136,16 +159,13 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 18,
         fontWeight: '600',
-        color: Colors.text,
     },
     nameCompleted: {
-        color: Colors.primary, // Teal
         fontWeight: 'bold',
-        // textDecorationLine: 'line-through', // REMOVED
     },
     timeContainer: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-    timeLabel: { fontSize: 11, color: Colors.textLight },
-    timeValue: { fontSize: 11, fontWeight: '700', color: Colors.text },
+    timeLabel: { fontSize: 11 },
+    timeValue: { fontSize: 11, fontWeight: '700' },
     lateBadge: {
         backgroundColor: '#FC8181', // Reddish
         paddingHorizontal: 6,
@@ -168,11 +188,10 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     checkboxUnchecked: {
-        borderColor: Colors.border,
+        // Dynamic
     },
     checkboxChecked: {
-        backgroundColor: Colors.primary, // Teal
-        borderColor: Colors.primary,
+        // Dynamic
     },
     checkboxLate: {
         backgroundColor: '#FC8181', // Red for late checkmark bg

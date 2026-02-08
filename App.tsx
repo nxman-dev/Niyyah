@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import BottomTabNavigator from './src/navigation/BottomTabNavigator';
@@ -7,12 +7,18 @@ import { StatusBar } from 'expo-status-bar';
 import { PrayerProvider } from './src/context/PrayerContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { View, ActivityIndicator, Text } from 'react-native';
+import { useFonts, Inter_300Light, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import * as SplashScreen from 'expo-splash-screen';
 
 import { Colors } from './src/constants/Colors';
 
 import OnboardingNavigator from './src/navigation/OnboardingNavigator';
 import AchievementPopup from './src/components/AchievementPopup';
 import { supabase } from './src/lib/supabase';
+import { ThemeProvider } from './src/context/ThemeContext';
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
 
 function RootNavigator() {
   const { session, isLoading, profileStatus, refreshProfile, profileError } = useAuth();
@@ -79,14 +85,34 @@ function RootNavigator() {
 }
 
 export default function App() {
+  let [fontsLoaded] = useFonts({
+    Inter_300Light,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
+  const onLayoutRootView = useCallback(async () => {
+    if (fontsLoaded) {
+      await SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <PrayerProvider>
-          <RootNavigator />
-          <AchievementPopup />
-        </PrayerProvider>
-      </AuthProvider>
+    <SafeAreaProvider onLayout={onLayoutRootView}>
+      <ThemeProvider>
+        <AuthProvider>
+          <PrayerProvider>
+            <RootNavigator />
+            <AchievementPopup />
+          </PrayerProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

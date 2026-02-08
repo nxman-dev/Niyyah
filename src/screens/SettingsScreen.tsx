@@ -5,9 +5,13 @@ import { usePrayers } from '../context/PrayerContext';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 
+import { useTheme } from '../context/ThemeContext';
+
 export default function SettingsScreen({ navigation }: any) {
     const { settings, toggleNotifications, updateSettings, resetData } = usePrayers();
+    const { theme, setTheme, colors, isDark } = useTheme();
 
+    // ... (keep handleReset, increaseLeadTime, decreaseLeadTime, handleSignOut, handleAddAccount)
     const handleReset = () => {
         Alert.alert(
             "Reset All Data",
@@ -80,25 +84,76 @@ export default function SettingsScreen({ navigation }: any) {
         }
     };
 
+    // Dynamic Styles based on theme
+    const dynamicStyles = {
+        container: { backgroundColor: colors.background },
+        header: { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        titleText: { color: colors.text },
+        section: { backgroundColor: colors.surface, shadowOpacity: isDark ? 0 : 0.05 }, // No shadow in dark mode usually
+        sectionTitle: { color: colors.primaryDark },
+        label: { color: colors.text },
+        subLabel: { color: colors.textLight },
+        stepperValue: { color: colors.text },
+        stepper: { backgroundColor: colors.background },
+        stepperBtnIcon: colors.text,
+        accountButton: { backgroundColor: colors.background, borderColor: colors.border },
+        accountButtonText: { color: colors.text },
+        versionText: { color: colors.textLight },
+        themeButton: {
+            flex: 1,
+            padding: 12,
+            alignItems: 'center' as const,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: colors.border
+        },
+        themeButtonActive: {
+            backgroundColor: colors.primary,
+            borderColor: colors.primary
+        },
+        themeText: { color: colors.text, fontWeight: '600' as const },
+        themeTextActive: { color: 'white', fontWeight: '700' as const }
+    };
+
+    const ThemeOption = ({ mode, label, icon }: { mode: 'light' | 'dark' | 'system', label: string, icon: string }) => (
+        <TouchableOpacity
+            style={[dynamicStyles.themeButton, theme === mode && dynamicStyles.themeButtonActive]}
+            onPress={() => setTheme(mode)}
+        >
+            <Ionicons name={icon as any} size={20} color={theme === mode ? 'white' : colors.text} style={{ marginBottom: 4 }} />
+            <Text style={[dynamicStyles.themeText, theme === mode && dynamicStyles.themeTextActive]}>{label}</Text>
+        </TouchableOpacity>
+    );
+
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.titleText}>Settings</Text>
+        <SafeAreaView style={[styles.container, dynamicStyles.container]}>
+            <View style={[styles.header, dynamicStyles.header]}>
+                <Text style={[styles.titleText, dynamicStyles.titleText]}>Settings</Text>
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
 
+                {/* Appearance Settings */}
+                <View style={[styles.section, dynamicStyles.section]}>
+                    <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Appearance</Text>
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                        <ThemeOption mode="light" label="Light" icon="sunny-outline" />
+                        <ThemeOption mode="dark" label="Dark" icon="moon-outline" />
+                        <ThemeOption mode="system" label="Auto" icon="phone-portrait-outline" />
+                    </View>
+                </View>
+
                 {/* General Settings */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Notifications</Text>
+                <View style={[styles.section, dynamicStyles.section]}>
+                    <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Notifications</Text>
                     <View style={styles.row}>
                         <View style={styles.rowText}>
-                            <Text style={styles.label}>Enable Reminders</Text>
-                            <Text style={styles.subLabel}>Get notified for prayer times</Text>
+                            <Text style={[styles.label, dynamicStyles.label]}>Enable Reminders</Text>
+                            <Text style={[styles.subLabel, dynamicStyles.subLabel]}>Get notified for prayer times</Text>
                         </View>
                         <Switch
-                            trackColor={{ false: Colors.inactive, true: Colors.primary }}
-                            thumbColor={Colors.surface}
+                            trackColor={{ false: colors.inactive, true: colors.primary }}
+                            thumbColor={colors.surface}
                             onValueChange={toggleNotifications}
                             value={settings.notificationsEnabled}
                         />
@@ -106,25 +161,25 @@ export default function SettingsScreen({ navigation }: any) {
 
                     <View style={[styles.row, { marginTop: 16 }]}>
                         <View style={styles.rowText}>
-                            <Text style={styles.label}>Reminder Lead Time</Text>
-                            <Text style={styles.subLabel}>Alert before prayer ends</Text>
+                            <Text style={[styles.label, dynamicStyles.label]}>Reminder Lead Time</Text>
+                            <Text style={[styles.subLabel, dynamicStyles.subLabel]}>Alert before prayer ends</Text>
                         </View>
-                        <View style={styles.stepper}>
+                        <View style={[styles.stepper, dynamicStyles.stepper]}>
                             <TouchableOpacity onPress={decreaseLeadTime} style={styles.stepperBtn}>
-                                <Ionicons name="remove" size={20} color={Colors.text} />
+                                <Ionicons name="remove" size={20} color={dynamicStyles.stepperBtnIcon} />
                             </TouchableOpacity>
-                            <Text style={styles.stepperValue}>{settings.reminderLeadTime}m</Text>
+                            <Text style={[styles.stepperValue, dynamicStyles.stepperValue]}>{settings.reminderLeadTime}m</Text>
                             <TouchableOpacity onPress={increaseLeadTime} style={styles.stepperBtn}>
-                                <Ionicons name="add" size={20} color={Colors.text} />
+                                <Ionicons name="add" size={20} color={dynamicStyles.stepperBtnIcon} />
                             </TouchableOpacity>
                         </View>
                     </View>
                 </View>
 
                 {/* Prayer Times Configuration */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Prayer Schedule</Text>
-                    <Text style={styles.description}>Customize Start, Mosque, and End times for your location.</Text>
+                <View style={[styles.section, dynamicStyles.section]}>
+                    <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Prayer Schedule</Text>
+                    <Text style={[styles.description, { color: colors.textLight }]}>Customize Start, Mosque, and End times for your location.</Text>
 
                     <TouchableOpacity
                         style={styles.configButton}
@@ -136,29 +191,29 @@ export default function SettingsScreen({ navigation }: any) {
                 </View>
 
                 {/* Account Management */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Account</Text>
+                <View style={[styles.section, dynamicStyles.section]}>
+                    <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Account</Text>
 
-                    <TouchableOpacity style={[styles.accountButton, { marginBottom: 12 }]} onPress={() => navigation.navigate('Profile')}>
-                        <Ionicons name="person-circle-outline" size={24} color={Colors.primary} />
-                        <Text style={styles.accountButtonText}>View Profile</Text>
-                        <Ionicons name="chevron-forward" size={20} color={Colors.textLight} style={{ marginLeft: 'auto' }} />
+                    <TouchableOpacity style={[styles.accountButton, dynamicStyles.accountButton, { marginBottom: 12 }]} onPress={() => navigation.navigate('Profile')}>
+                        <Ionicons name="person-circle-outline" size={24} color={colors.primary} />
+                        <Text style={[styles.accountButtonText, dynamicStyles.accountButtonText]}>View Profile</Text>
+                        <Ionicons name="chevron-forward" size={20} color={colors.textLight} style={{ marginLeft: 'auto' }} />
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.accountButton} onPress={handleSignOut}>
-                        <Ionicons name="log-out-outline" size={20} color={Colors.primary} />
-                        <Text style={styles.accountButtonText}>Sign Out</Text>
+                    <TouchableOpacity style={[styles.accountButton, dynamicStyles.accountButton]} onPress={handleSignOut}>
+                        <Ionicons name="log-out-outline" size={20} color={colors.primary} />
+                        <Text style={[styles.accountButtonText, dynamicStyles.accountButtonText]}>Sign Out</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={[styles.accountButton, { marginTop: 12 }]} onPress={handleAddAccount}>
-                        <Ionicons name="people-outline" size={20} color={Colors.primary} />
-                        <Text style={styles.accountButtonText}>Add Another Account</Text>
+                    <TouchableOpacity style={[styles.accountButton, dynamicStyles.accountButton, { marginTop: 12 }]} onPress={handleAddAccount}>
+                        <Ionicons name="people-outline" size={20} color={colors.primary} />
+                        <Text style={[styles.accountButtonText, dynamicStyles.accountButtonText]}>Add Another Account</Text>
                     </TouchableOpacity>
                 </View>
 
                 {/* Danger Zone */}
-                <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: '#E53E3E' }]}>Danger Zone</Text>
+                <View style={[styles.section, dynamicStyles.section]}>
+                    <Text style={[styles.sectionTitle, { color: colors.error }]}>Danger Zone</Text>
                     <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
                         <Ionicons name="trash-outline" size={20} color="#FFF" />
                         <Text style={styles.resetText}>Reset All Data</Text>
@@ -166,7 +221,7 @@ export default function SettingsScreen({ navigation }: any) {
                 </View>
 
                 <View style={styles.footer}>
-                    <Text style={styles.versionText}>Prayer Streak v1.2.0 (Power User)</Text>
+                    <Text style={[styles.versionText, dynamicStyles.versionText]}>Prayer Streak v1.3.0 (Dark Mode)</Text>
                 </View>
             </ScrollView>
 

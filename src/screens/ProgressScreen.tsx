@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { StyleSheet, Text, View, SafeAreaView, Dimensions, ScrollView } from 'react-native';
 import { Colors } from '../constants/Colors';
 import { usePrayers } from '../context/PrayerContext';
+import { useTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar, DateData } from 'react-native-calendars';
 
@@ -21,6 +22,7 @@ const getLast7Days = () => {
 export default function ProgressScreen() {
     const { streak, longestStreak, getToDaysRatio, data } = usePrayers();
     const { completed, total } = getToDaysRatio();
+    const { colors, isDark } = useTheme();
 
     // 1. Process Calendar Markers
     const markedDates = useMemo(() => {
@@ -38,7 +40,7 @@ export default function ProgressScreen() {
             markers[date] = {
                 customStyles: {
                     container: { backgroundColor: 'transparent' },
-                    text: { color: Colors.text },
+                    text: { color: colors.text },
                 },
                 dotColor: color,
                 marked: true
@@ -47,14 +49,14 @@ export default function ProgressScreen() {
 
         const today = new Date().toISOString().split('T')[0];
         if (!markers[today]) {
-            markers[today] = { selected: true, selectedColor: Colors.primary };
+            markers[today] = { selected: true, selectedColor: colors.primary };
         } else {
             markers[today].selected = true;
-            markers[today].selectedColor = Colors.primary;
+            markers[today].selectedColor = colors.primary;
         }
 
         return markers;
-    }, [data]);
+    }, [data, colors]);
 
     // 2. Process Breakdown (Last 7 Days)
     const breakdown = useMemo(() => {
@@ -79,51 +81,66 @@ export default function ProgressScreen() {
         }));
     }, [data]);
 
+    // Dynamic Styles
+    const dynamicStyles = {
+        container: { backgroundColor: colors.background },
+        header: { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        titleText: { color: colors.text },
+        card: { backgroundColor: colors.surface, shadowOpacity: isDark ? 0 : 0.05 },
+        cardTitle: { color: colors.text },
+        streakLabel: { color: colors.textLight },
+        streakCount: { color: colors.text },
+        legendText: { color: colors.textLight },
+        breakdownName: { color: colors.text },
+        barTrack: { backgroundColor: isDark ? colors.background : colors.background }, // Maybe darker background for track in dark mode?
+        breakdownCount: { color: colors.textLight }
+    };
+
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.titleText}>Your Progress</Text>
+        <SafeAreaView style={[styles.container, dynamicStyles.container]}>
+            <View style={[styles.header, dynamicStyles.header]}>
+                <Text style={[styles.titleText, dynamicStyles.titleText]}>Your Progress</Text>
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
 
                 {/* Streak Highlights */}
                 <View style={styles.streakRow}>
-                    <View style={[styles.card, styles.streakCard]}>
+                    <View style={[styles.card, styles.streakCard, dynamicStyles.card]}>
                         <Ionicons name="flame" size={28} color={Colors.accent} />
                         <View>
-                            <Text style={styles.streakLabel}>Current</Text>
-                            <Text style={styles.streakCount}>{streak} Days</Text>
+                            <Text style={[styles.streakLabel, dynamicStyles.streakLabel]}>Current</Text>
+                            <Text style={[styles.streakCount, dynamicStyles.streakCount]}>{streak} Days</Text>
                         </View>
                     </View>
-                    <View style={[styles.card, styles.streakCard]}>
-                        <Ionicons name="trophy" size={28} color={Colors.primary} />
+                    <View style={[styles.card, styles.streakCard, dynamicStyles.card]}>
+                        <Ionicons name="trophy" size={28} color={colors.primary} />
                         <View>
-                            <Text style={styles.streakLabel}>Best</Text>
-                            <Text style={styles.streakCount}>{longestStreak} Days</Text>
+                            <Text style={[styles.streakLabel, dynamicStyles.streakLabel]}>Best</Text>
+                            <Text style={[styles.streakCount, dynamicStyles.streakCount]}>{longestStreak} Days</Text>
                         </View>
                     </View>
                 </View>
 
                 {/* Calendar */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Monthly Overview</Text>
+                <View style={[styles.card, dynamicStyles.card]}>
+                    <Text style={[styles.cardTitle, dynamicStyles.cardTitle]}>Monthly Overview</Text>
                     <Calendar
                         markingType={'simple'}
                         markedDates={markedDates}
                         theme={{
-                            backgroundColor: '#ffffff',
-                            calendarBackground: '#ffffff',
-                            textSectionTitleColor: '#b6c1cd',
-                            selectedDayBackgroundColor: Colors.primary,
+                            backgroundColor: 'transparent',
+                            calendarBackground: 'transparent',
+                            textSectionTitleColor: colors.textLight,
+                            selectedDayBackgroundColor: colors.primary,
                             selectedDayTextColor: '#ffffff',
-                            todayTextColor: Colors.primary,
-                            dayTextColor: '#2d4150',
+                            todayTextColor: colors.primary,
+                            dayTextColor: colors.text,
                             textDisabledColor: '#d9e1e8',
                             dotColor: '#00adf5',
                             selectedDotColor: '#ffffff',
-                            arrowColor: Colors.primary,
-                            monthTextColor: Colors.text,
+                            arrowColor: colors.primary,
+                            monthTextColor: colors.text,
                             indicatorColor: 'blue',
                             textDayFontWeight: '400',
                             textMonthFontWeight: 'bold',
@@ -133,24 +150,24 @@ export default function ProgressScreen() {
                             textDayHeaderFontSize: 12
                         }}
                     />
-                    <View style={styles.legend}>
-                        <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: '#319795' }]} /><Text style={styles.legendText}>Complete</Text></View>
-                        <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: '#ECC94B' }]} /><Text style={styles.legendText}>Partial</Text></View>
-                        <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: '#CBD5E0' }]} /><Text style={styles.legendText}>Missed</Text></View>
+                    <View style={[styles.legend, { borderTopColor: colors.border }]}>
+                        <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: '#319795' }]} /><Text style={[styles.legendText, dynamicStyles.legendText]}>Complete</Text></View>
+                        <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: '#ECC94B' }]} /><Text style={[styles.legendText, dynamicStyles.legendText]}>Partial</Text></View>
+                        <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: '#CBD5E0' }]} /><Text style={[styles.legendText, dynamicStyles.legendText]}>Missed</Text></View>
                     </View>
                 </View>
 
                 {/* Breakdown */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Prayer Breakdown (7 Days)</Text>
+                <View style={[styles.card, dynamicStyles.card]}>
+                    <Text style={[styles.cardTitle, dynamicStyles.cardTitle]}>Prayer Breakdown (7 Days)</Text>
                     <View style={styles.breakdownList}>
                         {breakdown.map((item, index) => (
                             <View key={index} style={styles.breakdownItem}>
-                                <Text style={styles.breakdownName}>{item.name}</Text>
-                                <View style={styles.barTrack}>
-                                    <View style={[styles.barFill, { width: `${(item.count / 7) * 100}%` }]} />
+                                <Text style={[styles.breakdownName, dynamicStyles.breakdownName]}>{item.name}</Text>
+                                <View style={[styles.barTrack, dynamicStyles.barTrack]}>
+                                    <View style={[styles.barFill, { width: `${(item.count / 7) * 100}%`, backgroundColor: colors.primary }]} />
                                 </View>
-                                <Text style={styles.breakdownCount}>{item.count}/7</Text>
+                                <Text style={[styles.breakdownCount, dynamicStyles.breakdownCount]}>{item.count}/7</Text>
                             </View>
                         ))}
                     </View>
@@ -164,19 +181,15 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.background,
     },
     header: {
         padding: 24,
         paddingTop: 40,
-        backgroundColor: Colors.surface,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.border,
     },
     titleText: {
         fontSize: 28,
         fontWeight: '600',
-        color: Colors.text,
     },
     content: {
         padding: 20,
@@ -184,18 +197,15 @@ const styles = StyleSheet.create({
         paddingBottom: 40,
     },
     card: {
-        backgroundColor: Colors.surface,
         borderRadius: 16,
         padding: 16,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
         shadowRadius: 8,
         elevation: 2,
     },
     cardTitle: {
         fontSize: 16,
-        color: Colors.text,
         fontWeight: '700',
         marginBottom: 16,
     },
@@ -212,13 +222,11 @@ const styles = StyleSheet.create({
     },
     streakLabel: {
         fontSize: 12,
-        color: Colors.textLight,
         textTransform: 'uppercase',
     },
     streakCount: {
         fontSize: 20,
         fontWeight: '700',
-        color: Colors.text,
     },
     legend: {
         flexDirection: 'row',
@@ -227,7 +235,6 @@ const styles = StyleSheet.create({
         marginTop: 16,
         paddingTop: 16,
         borderTopWidth: 1,
-        borderTopColor: Colors.border,
     },
     legendItem: {
         flexDirection: 'row',
@@ -241,7 +248,6 @@ const styles = StyleSheet.create({
     },
     legendText: {
         fontSize: 12,
-        color: Colors.textLight,
     },
     breakdownList: {
         gap: 12,
@@ -255,23 +261,19 @@ const styles = StyleSheet.create({
         width: 60,
         fontSize: 14,
         fontWeight: '600',
-        color: Colors.text,
     },
     barTrack: {
         flex: 1,
         height: 8,
-        backgroundColor: Colors.background,
         borderRadius: 4,
         overflow: 'hidden',
     },
     barFill: {
         height: '100%',
-        backgroundColor: Colors.primary,
         borderRadius: 4,
     },
     breakdownCount: {
         fontSize: 12,
-        color: Colors.textLight,
         width: 30,
         textAlign: 'right',
     },
