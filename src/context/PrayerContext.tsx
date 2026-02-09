@@ -55,6 +55,8 @@ interface PrayerContextType {
     newBadge: string | null;
     clearNewBadge: () => void;
     refreshTodayPrayers: () => Promise<void>;
+    showCelebration: boolean;
+    closeCelebration: () => void;
 }
 
 const DEFAULT_PRAYER_TIMES: PrayerTimeConfig[] = [
@@ -83,6 +85,8 @@ const PrayerContext = createContext<PrayerContextType>({
     newBadge: null,
     clearNewBadge: () => { },
     refreshTodayPrayers: async () => { },
+    showCelebration: false,
+    closeCelebration: () => { },
 });
 
 export const usePrayers = () => useContext(PrayerContext);
@@ -128,7 +132,9 @@ export function PrayerProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
     const [earnedBadges, setEarnedBadges] = useState<Set<string>>(new Set());
     const [newBadge, setNewBadge] = useState<string | null>(null);
+    const [showCelebration, setShowCelebration] = useState(false);
 
+    const closeCelebration = () => setShowCelebration(false);
     const clearNewBadge = () => setNewBadge(null);
 
     // DAILY LOCKOUT / MISS LOGIC
@@ -306,13 +312,16 @@ export function PrayerProvider({ children }: { children: React.ReactNode }) {
         const todaysPrayers = currentData[today] || {};
         const allPrayed = INITIAL_PRAYERS.every(p => {
             const s = todaysPrayers[p.id];
+            // console.log(`[checkStreak] ${p.id}: ${s}`);
             return s === 'Prayed' || s === 'Late';
         });
+        console.log(`[checkStreak] All Prayed? ${allPrayed}`);
 
         let currentStreak = streak;
 
         if (allPrayed) {
             const lastDate = await AsyncStorage.getItem(STORAGE_KEYS.LAST_COMPLETED);
+            console.log(`[checkStreak] Last Date in Storage: ${lastDate} | Today: ${today}`);
 
             if (lastDate !== today) {
                 // Check if last date was yesterday
@@ -320,11 +329,13 @@ export function PrayerProvider({ children }: { children: React.ReactNode }) {
                 yesterday.setDate(yesterday.getDate() - 1);
                 const yesterdayStr = yesterday.toISOString().split('T')[0];
 
+                console.log(`[checkStreak] Yesterday calculated as: ${yesterdayStr}`);
+
                 if (lastDate === yesterdayStr) {
+                    console.log(`[checkStreak] Incrementing streak!`);
                     currentStreak += 1;
                 } else {
-                    // If lastDate exists but not yesterday, reset to 1. 
-                    // If no lastDate, start at 1.
+                    console.log(`[checkStreak] Resetting streak to 1 (Gap or First time)`);
                     currentStreak = 1;
                 }
 
@@ -336,6 +347,8 @@ export function PrayerProvider({ children }: { children: React.ReactNode }) {
                     setLongestStreak(currentStreak);
                     await AsyncStorage.setItem(STORAGE_KEYS.LONGEST_STREAK, currentStreak.toString());
                 }
+            } else {
+                console.log(`[checkStreak] Already completed today. No streak change.`);
             }
         }
         return currentStreak;
@@ -456,6 +469,23 @@ export function PrayerProvider({ children }: { children: React.ReactNode }) {
                     await Notifications.cancelScheduledNotificationAsync(`${prayerId}_reminder`);
                 }
             }
+
+            // Check for Celebration
+            const completedCount = Object.values(newData[today]).filter(s => s === 'Prayed' || s === 'Late').length;
+            console.log(`[markAsPrayed] Completed Count: ${completedCount} / 5`);
+
+            if (completedCount === 5) {
+                const lastCelebDate = await AsyncStorage.getItem('@prayer_streak_last_celebration');
+                console.log(`[markAsPrayed] Last Celebration: ${lastCelebDate} | Today: ${today}`);
+
+                if (lastCelebDate !== today) {
+                    console.log("[markAsPrayed] TRIGGERING CELEBRATION!");
+                    setShowCelebration(true);
+                    await AsyncStorage.setItem('@prayer_streak_last_celebration', today);
+                } else {
+                    console.log("[markAsPrayed] Celebration already shown today.");
+                }
+            }
             // --- OPTIMISTIC UPDATE END ---
 
             // --- SYNC START ---
@@ -492,12 +522,22 @@ export function PrayerProvider({ children }: { children: React.ReactNode }) {
             console.error("[markAsPrayed] CRITICAL ERROR & ROLLBACK:", error);
 
             // --- ROLLBACK START ---
+            console.log("[markAsPrayed] performing rollback...");
             setData(previousData);
             setStreak(previousStreak);
             setLongestStreak(previousLongest);
+            setShowCelebration(false); // Rollback celebration
+
             await AsyncStorage.setItem(STORAGE_KEYS.DATA, JSON.stringify(previousData));
             await AsyncStorage.setItem(STORAGE_KEYS.STREAK, previousStreak.toString());
             await AsyncStorage.setItem(STORAGE_KEYS.LONGEST_STREAK, previousLongest.toString());
+
+            // Remove the celebration flag if we just set it
+            const currentCelebDate = await AsyncStorage.getItem('@prayer_streak_last_celebration');
+            if (currentCelebDate === today && previousData[today] && Object.values(previousData[today]).filter(s => s === 'Prayed' || s === 'Late').length < 5) {
+                await AsyncStorage.removeItem('@prayer_streak_last_celebration');
+            }
+
             if (previousLastCompleted) {
                 await AsyncStorage.setItem(STORAGE_KEYS.LAST_COMPLETED, previousLastCompleted);
             }
@@ -735,7 +775,9 @@ export function PrayerProvider({ children }: { children: React.ReactNode }) {
             earnedBadges,
             newBadge,
             clearNewBadge,
-            refreshTodayPrayers
+            refreshTodayPrayers,
+            showCelebration,
+            closeCelebration
         }}>
             {children}
         </PrayerContext.Provider>

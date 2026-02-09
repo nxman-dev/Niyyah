@@ -9,14 +9,17 @@ import { Colors } from '../constants/Colors';
 const { width } = Dimensions.get('window');
 
 export default function AchievementPopup() {
-    const { newBadge, clearNewBadge } = usePrayers();
+    const { newBadge, clearNewBadge, showCelebration } = usePrayers();
     const confettiRef = useRef<ConfettiCannon>(null);
 
     useEffect(() => {
-        if (newBadge) {
+        if (newBadge && !showCelebration) { // Only start if celebration is NOT showing
             confettiRef.current?.start();
         }
-    }, [newBadge]);
+    }, [newBadge, showCelebration]);
+
+    // If celebration is active, HIDE this popup completely
+    if (showCelebration) return null;
 
     if (!newBadge) return null;
 
@@ -48,7 +51,7 @@ export default function AchievementPopup() {
                     )}
 
                     <TouchableOpacity style={styles.closeButton} onPress={clearNewBadge}>
-                        <Text style={styles.closeButtonText}>Awesome!</Text>
+                        <Text style={styles.closeButtonText}>Alhamdulillah</Text>
                     </TouchableOpacity>
                 </View>
             </View>

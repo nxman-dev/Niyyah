@@ -14,6 +14,7 @@ import { Colors } from './src/constants/Colors';
 
 import OnboardingNavigator from './src/navigation/OnboardingNavigator';
 import AchievementPopup from './src/components/AchievementPopup';
+import CelebrationOverlay from './src/components/CelebrationOverlay';
 import { supabase } from './src/lib/supabase';
 import { ThemeProvider } from './src/context/ThemeContext';
 
@@ -110,6 +111,7 @@ export default function App() {
           <PrayerProvider>
             <RootNavigator />
             <AchievementPopup />
+            <CelebrationOverlay />
           </PrayerProvider>
         </AuthProvider>
       </ThemeProvider>
